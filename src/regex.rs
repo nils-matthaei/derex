@@ -42,8 +42,8 @@ impl R {
     ///
     /// # Example
     /// ```
-    /// # use derex::{R, seq, char};
-    /// let ab = seq(char('a'), char('b')); // Matches "ab"
+    /// # use derex::R;
+    /// let ab = R::seq(R::char('a'), R::char('b')); // Matches "ab"
     /// ```
     pub fn seq(left: R, right: R) -> R {
         R::Seq(Box::new(left), Box::new(right))
@@ -57,8 +57,8 @@ impl R {
     ///
     /// # Example
     /// ```
-    /// # use derex::{R, choice, char};
-    /// let a\_or\_b = choice(char('a'), char('b')); // Matches "a" or "b"
+    /// # use derex::R;
+    /// let a\_or\_b = R::choice(R::char('a'), R::char('b')); // Matches "a" or "b"
     /// ```
     pub fn choice(left: R, right: R) -> R {
         R::Choice(Box::new(left), Box::new(right))
@@ -71,8 +71,8 @@ impl R {
     ///
     /// # Example
     /// ```
-    /// # use derex::{R, star, char};
-    /// let a\_star = star(char('a')); // Matches "", "a", "aa", "aaa", etc.
+    /// # use derex::R;
+    /// let a\_star = R::star(R::char('a')); // Matches "", "a", "aa", "aaa", etc.
     /// ```
     pub fn star(inner: R) -> R {
         R::Star(Box::new(inner))
@@ -82,8 +82,8 @@ impl R {
     ///
     /// # Example
     /// ```
-    /// # use derex::{R, eps};
-    /// let empty = eps(); // Matches only the empty string
+    /// # use derex::R;
+    /// let empty = R::eps(); // Matches only the empty string
     /// ```
     pub fn eps() -> R {
         R::Eps
@@ -93,8 +93,8 @@ impl R {
     ///
     /// # Example
     /// ```
-    /// # use derex::{R, phi};
-    /// let nothing = phi(); // Matches no strings
+    /// # use derex::R;
+    /// let nothing = R::phi(); // Matches no strings
     /// ```
     pub fn phi() -> R {
         R::Phi
@@ -107,8 +107,8 @@ impl R {
     ///
     /// # Example
     /// ```
-    /// # use derex::{R, char};
-    /// let a = char('a'); // Matches "a"
+    /// # use derex::R;
+    /// let a = R::char('a'); // Matches "a"
     /// ```
     pub fn char(c: char) -> R {
         R::L(c)
