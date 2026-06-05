@@ -26,6 +26,9 @@ pub enum R {
     /// Sequential composition (concatenation) of two regexes.
     Seq(Box<R>, Box<R>),
 
+    /// Sequential composition (concatenation) of n regexes.
+    Seqs(Vec<R>),
+
     /// Alternation (choice) between two regexes.
     Choice(Box<R>, Box<R>),
 
@@ -47,6 +50,20 @@ impl R {
     /// ```
     pub fn seq(left: R, right: R) -> R {
         R::Seq(Box::new(left), Box::new(right))
+    }
+
+    /// Creates a sequential composition of multiple regexes.
+    ///
+    /// # Arguments
+    /// * `regexes` - A vector of regexes to concatenate in order
+    ///
+    /// # Example
+    /// ```
+    /// # use derex::R;
+    /// let abc = R::seqs(vec![R::char('a'), R::char('b'), R::char('c')]);
+    /// ```
+    pub fn seqs(regexes: Vec<R>) -> R {
+        R::Seqs(regexes)
     }
 
     /// Creates an alternation (choice) between two regexes.
@@ -112,5 +129,72 @@ impl R {
     /// ```
     pub fn char(c: char) -> R {
         R::L(c)
+    }
+}
+
+/// Normalizes a regex into Seq-Assoc normal form.
+///
+/// This applies the associativity law `(r . s) . t = r . (s . t)` to eliminate
+/// nested `Seq` constructors and replace them with `Seqs`. All intermediate
+/// `Seqs` are flattened, so `Seqs [Seqs xs, Seqs ys]` becomes `Seqs (xs ++ ys)`.
+///
+/// # Arguments
+/// * `r` - The regex to normalize
+///
+/// # Example
+/// ```
+/// # use derex::R;
+/// let r = R::seq(R::seq(R::char('a'), R::char('b')), R::char('c'));
+/// let normalized = derex::normalize(r);
+/// // Now uses Seqs instead of nested Seq
+/// ```
+pub fn normalize(r: R) -> R {
+    norm_seqs(seq_to_seqs(r))
+}
+
+/// Eliminates `Seq` constructors by converting them to `Seqs`.
+///
+/// This is the first step of normalization. It recursively traverses the regex
+/// and replaces all `Seq` constructors with `Seqs` containing the same elements.
+/// Other variants (`Choice`, `Star`) are recursively processed, while `Phi`, `Eps`,
+/// and `L` are left unchanged.
+///
+/// # Arguments
+/// * `r` - The regex to transform
+fn seq_to_seqs(r: R) -> R {
+    match r {
+        R::Choice(left, right) => R::choice(seq_to_seqs(*left), seq_to_seqs(*right)),
+        R::Star(inner) => R::star(seq_to_seqs(*inner)),
+        R::Seq(left, right) => R::seqs(vec![seq_to_seqs(*left), seq_to_seqs(*right)]),
+        R::Seqs(regexes) => R::seqs(regexes.into_iter().map(seq_to_seqs).collect()),
+        _ => r,
+    }
+}
+/// Flattens nested `Seqs` constructors into a single flat sequence.
+///
+/// This is the second step of normalization. It recursively processes the regex
+/// and whenever a `Seqs` variant is encountered within another `Seqs`, it extracts
+/// and flattens the inner sequence. For example, `Seqs [x, Seqs [y, z]]` becomes
+/// `Seqs [x, y, z]`. Other variants (`Choice`, `Star`) are recursively processed,
+/// while terminal nodes (`Phi`, `Eps`, `L`) are left unchanged.
+///
+/// # Arguments
+/// * `r` - The regex to normalize
+fn norm_seqs(r: R) -> R {
+    match r {
+        R::Choice(left, right) => R::choice(norm_seqs(*left), norm_seqs(*right)),
+        R::Star(inner) => R::star(norm_seqs(*inner)),
+        R::Seq(_, _) => unreachable!("Seq should have been removed by seq_to_seqs"),
+        R::Seqs(regexes) => R::seqs(
+            regexes
+                .into_iter()
+                .map(norm_seqs)
+                .flat_map(|r| match r {
+                    R::Seqs(xs) => xs,
+                    r => vec![r],
+                })
+                .collect(),
+        ),
+        _ => r,
     }
 }
