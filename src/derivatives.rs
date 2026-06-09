@@ -109,3 +109,43 @@ pub fn matcher(input: &str, r: &R) -> bool {
     }
     current.iter().any(nullable)
 }
+
+fn letters(r: &R) -> Vec<char> {
+    match r {
+        R::L(c) => vec![*c],
+        R::Alt(left, right) | R::Seq(left, right) => {
+            let mut ls: Vec<char> = [letters(left), letters(right)].concat();
+            ls.sort();
+            ls.dedup();
+            ls
+        }
+        R::Seqs(rs) => {
+            let mut ls: Vec<char> = rs.into_iter().flat_map(|s| letters(s)).collect();
+            ls.sort();
+            ls.dedup();
+            ls
+        }
+        R::Star(inner) => letters(inner),
+        _ => vec![],
+    }
+}
+
+pub fn descendants(r: &R) -> Vec<R> {
+    let alphabet = letters(r);
+    let mut current = vec![r.clone()];
+    let mut next: Vec<R> = vec![];
+    loop {
+        next = current
+            .iter()
+            .flat_map(|r| alphabet.iter().flat_map(|&c| part_deriv(c, r)))
+            .collect();
+        next.extend(current.clone());
+        next.sort();
+        next.dedup();
+        if next == current {
+            return current;
+        }
+        current = next;
+    }
+}
+
