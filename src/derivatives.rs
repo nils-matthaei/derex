@@ -34,6 +34,9 @@ fn nullable(r: &R) -> bool {
     }
 }
 
+/// Computes the set of partial derivatives of a regular expression with respect to a character.
+/// The partial derivative of `r` with respect to `c` is the set of regular expressions
+/// that can follow after matching `c` against `r`.
 fn part_deriv(c: char, r: &R) -> Vec<R> {
     match (c, r) {
         (_, R::Eps) => vec![],
@@ -98,6 +101,19 @@ fn part_deriv(c: char, r: &R) -> Vec<R> {
     }
 }
 
+/// Matches a string against a regular expression using Antimirov's partial derivative algorithm.
+/// Iteratively computes the set of partial derivatives for each input character,
+/// and checks nullability of the resulting set after all input is consumed.
+///
+/// # Example
+/// ```
+/// # use derex::regex::R;
+/// # use derex::derivatives::matcher;
+/// // (ab)* matches "ababab"
+/// let ab_star = R::star(R::seq(R::char('a'), R::char('b')));
+/// assert!(matcher("ababab", &ab_star));
+/// assert!(!matcher("aba", &ab_star));
+/// ```
 pub fn matcher(input: &str, r: &R) -> bool {
     let mut current: Vec<R> = vec![r.clone()];
     for c in input.chars() {
@@ -108,6 +124,9 @@ pub fn matcher(input: &str, r: &R) -> bool {
     current.iter().any(nullable)
 }
 
+/// Extracts all distinct characters appearing in a regular expression.
+/// The result is sorted and deduplicated.
+/// Used to determine the alphabet for computing descendants.
 fn letters(r: &R) -> Vec<char> {
     match r {
         R::L(c) => vec![*c],
@@ -128,6 +147,11 @@ fn letters(r: &R) -> Vec<char> {
     }
 }
 
+/// Computes the complete set of all partial derivatives reachable from a regular expression.
+/// Starting from the expression itself, repeatedly applies [`part_deriv`] for every character
+/// in the alphabet until no new expressions are produced (fixed point).
+///
+/// This demonstrates Antimirov's key result that the set of partial derivatives is always finite.
 pub fn descendants(r: &R) -> Vec<R> {
     let alphabet = letters(r);
     let mut current = vec![r.clone()];
@@ -147,10 +171,15 @@ pub fn descendants(r: &R) -> Vec<R> {
     }
 }
 
+/// Extracts all subterms of a regular expression, including the expression itself.
+/// Note that duplicates may appear, for example `Seq(L('a'), L('a'))`
+/// yields `[Seq(L('a'), L('a')), L('a'), L('a')]`.
 pub fn subterm(r: &R) -> Vec<R> {
     std::iter::once(r.clone()).chain(subterm_2(r)).collect()
 }
 
+/// Extracts all strict subterms of a regular expression, excluding the expression itself.
+/// Helper for [`subterm`].
 fn subterm_2(r: &R) -> Vec<R> {
     match r {
         R::Eps | R::L(_) => vec![],
@@ -160,20 +189,25 @@ fn subterm_2(r: &R) -> Vec<R> {
     }
 }
 
+/// Verifies Antimirov's subterm property for a regular expression.
+/// For each descendant `d` of `r`, checks that either:
+/// - `d` equals `Eps`
+/// - `d` equals `r` itself
+/// - `d` is a sequence whose elements are all subterms of `r`
 pub fn prop(r: &R) -> bool {
     let rp = normalize(r.clone());
-    let ds: Vec<R> = descendants(&rp)
-        .into_iter()
-        .map(|d| normalize(d))
-        .collect();
+    let ds: Vec<R> = descendants(&rp).into_iter().map(|d| normalize(d)).collect();
     ds.iter().all(|d| check_shape(d, &rp))
 }
 
+/// Checks whether a single descendant `d` satisfies Antimirov's subterm property
+/// with respect to the original expression `r`.
+/// Helper for [`prop`].
 fn check_shape(d: &R, r: &R) -> bool {
     match d {
         R::Eps => true,
         d if d == r => true,
         R::Seqs(ds) => ds.iter().all(|d| subterm(r).contains(d)),
-        _ => unreachable!("impossible case: {:?} {:?}", r, d)
-    } 
+        _ => unreachable!("impossible case: {:?} {:?}", r, d),
+    }
 }
