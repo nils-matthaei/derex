@@ -14,9 +14,6 @@
 /// - `Star(R)`: Kleene star (zero or more repetitions)
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum R {
-    /// The empty language. Accepts no strings.
-    Phi,
-
     /// The empty string. Accepts only the empty string ε.
     Eps,
 
@@ -143,17 +140,6 @@ impl R {
     /// ```
     pub fn eps() -> R {
         R::Eps
-    }
-
-    /// Creates the empty language (matches nothing).
-    ///
-    /// # Example
-    /// ```
-    /// # use derex::R;
-    /// let nothing = R::phi(); // Matches no strings
-    /// ```
-    pub fn phi() -> R {
-        R::Phi
     }
 
     /// Creates a regex matching a single character.

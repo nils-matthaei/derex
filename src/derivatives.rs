@@ -31,7 +31,6 @@ fn nullable(r: &R) -> bool {
         R::Seqs(rs) => rs.into_iter().all(nullable),
         R::Alt(left, right) => nullable(left) || nullable(right),
         R::Star(_) => true,
-        R::Phi => false,
     }
 }
 
@@ -96,6 +95,5 @@ fn part_deriv(c: char, r: &R) -> Vec<R> {
             pds.dedup();
             pds
         }
-        _ => todo!(),
     }
 }
