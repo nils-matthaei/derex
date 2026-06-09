@@ -13,7 +13,7 @@
 //! - Antimirov, V. (1996). Partial derivatives of regular expressions and finite automaton constructions.
 //!   <https://www.sciencedirect.com/science/article/pii/0304397595001824>
 
-use crate::regex::R;
+use crate::regex::{R, normalize};
 
 /// Checks whether a regular expression is nullable,
 /// i.e. whether it accepts the empty string ε.
@@ -158,4 +158,22 @@ fn subterm_2(r: &R) -> Vec<R> {
         R::Seqs(rs) => rs.iter().flat_map(|r| subterm(r)).collect(),
         R::Star(inner) => subterm(inner),
     }
+}
+
+pub fn prop(r: &R) -> bool {
+    let rp = normalize(r.clone());
+    let ds: Vec<R> = descendants(&rp)
+        .into_iter()
+        .map(|d| normalize(d))
+        .collect();
+    ds.iter().all(|d| check_shape(d, &rp))
+}
+
+fn check_shape(d: &R, r: &R) -> bool {
+    match d {
+        R::Eps => true,
+        d if d == r => true,
+        R::Seqs(ds) => ds.iter().all(|d| subterm(r).contains(d)),
+        _ => unreachable!("impossible case: {:?} {:?}", r, d)
+    } 
 }
