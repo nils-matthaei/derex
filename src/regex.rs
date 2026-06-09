@@ -48,17 +48,17 @@ impl R {
     pub fn seq(left: R, right: R) -> R {
         R::Seq(Box::new(left), Box::new(right))
     }
-    
+
     /// Smart constructor for sequential composition of two regexes.
     /// Simplifies the result by eliminating redundant `Eps` terms:
     /// - `Eps . r` reduces to `r`
     /// - `r . Eps` reduces to `r`
     /// Otherwise falls back to `R::Seq`.
-    pub fn smart_seq(left: R, right: R) -> R{
+    pub fn smart_seq(left: R, right: R) -> R {
         match (left, right) {
             (R::Eps, right) => right,
             (left, R::Eps) => left,
-            (left, right) => R::seq(left, right)
+            (left, right) => R::seq(left, right),
         }
     }
 
@@ -75,7 +75,7 @@ impl R {
     pub fn seqs(regexes: Vec<R>) -> R {
         R::Seqs(regexes)
     }
-    
+
     /// Smart constructor for sequential composition of two regexes.
     /// Simplifies the result by eliminating redundant `Eps` terms and
     /// flattening nested `Seqs` into a single flat `Vec`:
@@ -93,12 +93,12 @@ impl R {
             (left, R::Seqs(mut rs)) => {
                 rs.insert(0, left);
                 R::Seqs(rs)
-            },
+            }
             (R::Seqs(mut ls), right) => {
                 ls.push(right);
                 R::Seqs(ls)
-            },
-            (left, right) => R::Seqs(vec![left, right])
+            }
+            (left, right) => R::Seqs(vec![left, right]),
         }
     }
 
