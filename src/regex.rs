@@ -10,7 +10,7 @@
 /// - `Eps`: The empty string (matches only the empty string)
 /// - `L(char)`: A single character
 /// - `Seq(R, R)`: Sequential composition (concatenation)
-/// - `Choice(R, R)`: Alternation (choice between two patterns)
+/// - `Alt(R, R)`: Alternation (choice between two patterns)
 /// - `Star(R)`: Kleene star (zero or more repetitions)
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum R {
@@ -30,7 +30,7 @@ pub enum R {
     Seqs(Vec<R>),
 
     /// Alternation (choice) between two regexes.
-    Choice(Box<R>, Box<R>),
+    Alt(Box<R>, Box<R>),
 
     /// Kleene star. Zero or more repetitions of a regex.
     Star(Box<R>),
@@ -117,7 +117,7 @@ impl R {
     /// let a\_or\_b = R::choice(R::char('a'), R::char('b')); // Matches "a" or "b"
     /// ```
     pub fn choice(left: R, right: R) -> R {
-        R::Choice(Box::new(left), Box::new(right))
+        R::Alt(Box::new(left), Box::new(right))
     }
 
     /// Creates a Kleene star (zero or more repetitions) of a regex.
@@ -195,14 +195,14 @@ pub fn normalize(r: R) -> R {
 ///
 /// This is the first step of normalization. It recursively traverses the regex
 /// and replaces all `Seq` constructors with `Seqs` containing the same elements.
-/// Other variants (`Choice`, `Star`) are recursively processed, while `Phi`, `Eps`,
+/// Other variants (`Alt`, `Star`) are recursively processed, while `Phi`, `Eps`,
 /// and `L` are left unchanged.
 ///
 /// # Arguments
 /// * `r` - The regex to transform
 fn seq_to_seqs(r: R) -> R {
     match r {
-        R::Choice(left, right) => R::choice(seq_to_seqs(*left), seq_to_seqs(*right)),
+        R::Alt(left, right) => R::choice(seq_to_seqs(*left), seq_to_seqs(*right)),
         R::Star(inner) => R::star(seq_to_seqs(*inner)),
         R::Seq(left, right) => R::seqs(vec![seq_to_seqs(*left), seq_to_seqs(*right)]),
         R::Seqs(regexes) => R::seqs(regexes.into_iter().map(seq_to_seqs).collect()),
@@ -214,14 +214,14 @@ fn seq_to_seqs(r: R) -> R {
 /// This is the second step of normalization. It recursively processes the regex
 /// and whenever a `Seqs` variant is encountered within another `Seqs`, it extracts
 /// and flattens the inner sequence. For example, `Seqs [x, Seqs [y, z]]` becomes
-/// `Seqs [x, y, z]`. Other variants (`Choice`, `Star`) are recursively processed,
+/// `Seqs [x, y, z]`. Other variants (`Alt`, `Star`) are recursively processed,
 /// while terminal nodes (`Phi`, `Eps`, `L`) are left unchanged.
 ///
 /// # Arguments
 /// * `r` - The regex to normalize
 fn norm_seqs(r: R) -> R {
     match r {
-        R::Choice(left, right) => R::choice(norm_seqs(*left), norm_seqs(*right)),
+        R::Alt(left, right) => R::choice(norm_seqs(*left), norm_seqs(*right)),
         R::Star(inner) => R::star(norm_seqs(*inner)),
         R::Seq(_, _) => unreachable!("Seq should have been removed by seq_to_seqs"),
         R::Seqs(regexes) => R::seqs(

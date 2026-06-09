@@ -13,6 +13,8 @@
 //! - Antimirov, V. (1996). Partial derivatives of regular expressions and finite automaton constructions.
 //!   <https://www.sciencedirect.com/science/article/pii/0304397595001824>
 
+use std::collections::HashSet;
+
 use crate::regex::R;
 
 /// Checks whether a regular expression is nullable,
@@ -21,7 +23,7 @@ use crate::regex::R;
 /// - `L` is never nullable
 /// - `Seq` is nullable if both sides are nullable
 /// - `Seqs` is nullable if all elements are nullable
-/// - `Choice` is nullable if either side is nullable
+/// - `Alt` is nullable if either side is nullable
 /// - `Star` is always nullable (zero repetitions)
 fn nullable(r: R) -> bool {
     match r {
@@ -29,8 +31,9 @@ fn nullable(r: R) -> bool {
         R::L(_) => false,
         R::Seq(left, right) => nullable(*left) && nullable(*right),
         R::Seqs(rs) => rs.into_iter().all(nullable),
-        R::Choice(left, right) => nullable(*left) || nullable(*right),
+        R::Alt(left, right) => nullable(*left) || nullable(*right),
         R::Star(_) => true,
         R::Phi => false,
     }
 }
+
