@@ -13,8 +13,6 @@
 //! - Antimirov, V. (1996). Partial derivatives of regular expressions and finite automaton constructions.
 //!   <https://www.sciencedirect.com/science/article/pii/0304397595001824>
 
-use std::vec;
-
 use crate::regex::R;
 
 /// Checks whether a regular expression is nullable,
@@ -149,3 +147,15 @@ pub fn descendants(r: &R) -> Vec<R> {
     }
 }
 
+pub fn subterm(r: &R) -> Vec<R> {
+    std::iter::once(r.clone()).chain(subterm_2(r)).collect()
+}
+
+fn subterm_2(r: &R) -> Vec<R> {
+    match r {
+        R::Eps | R::L(_) => vec![],
+        R::Alt(left, right) | R::Seq(left, right) => [subterm(left), subterm(right)].concat(),
+        R::Seqs(rs) => rs.iter().flat_map(|r| subterm(r)).collect(),
+        R::Star(inner) => subterm(inner),
+    }
+}
