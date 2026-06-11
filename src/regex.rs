@@ -195,6 +195,7 @@ fn seq_to_seqs(r: R) -> R {
         _ => r,
     }
 }
+
 /// Flattens nested `Seqs` constructors into a single flat sequence.
 ///
 /// This is the second step of normalization. It recursively processes the regex
