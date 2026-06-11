@@ -224,3 +224,92 @@ fn norm_seqs(r: R) -> R {
         _ => r,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    // Tests that normalize converts binary Seq into n-ary Seqs.
+    // Seq(L('a'), L('a')) should normalize to Seqs([L('a'), L('a')]),
+    // verifying that normalize eliminates all binary Seq constructors
+    // in favor of the canonical n-ary Seqs representation.
+    fn test_normalize_eliminates_seq() {
+        let r = R::seq(R::char('a'), R::char('a'));
+        let s = R::seqs(vec![R::char('a'), R::char('a')]);
+        let r_norm = normalize(r);
+        assert!(r_norm == s);
+    }
+
+    #[test]
+    // Tests that smart_seq eliminates R::Eps on the left.
+    fn test_smart_seq_eps_left() {
+        let expected = R::char('a');
+        assert!(R::smart_seq(R::Eps, R::char('a')) == expected);
+    }
+
+    #[test]
+    // Tests that smart_seq eliminates R::Eps on the right.
+    fn test_smart_seq_eps_right() {
+        let expected = R::char('a');
+        assert!(R::smart_seq(R::char('a'), R::Eps) == expected);
+    }
+    #[test]
+    // Tests that smart_seq wraps two plain regexes in a new Seqs.
+    // L('a') . L('b') should produce Seqs([L('a'), L('b')]).
+    fn test_smart_seq_wraps_two_plain() {
+        let expected = R::seq(R::char('a'), R::char('b'));
+        assert!(R::smart_seq(R::char('a'), R::char('b')) == expected);
+    }
+
+    #[test]
+    // Tests that smart_seqs eliminates R::Eps on the left.
+    fn test_smart_seqs_eps_left() {
+        let r_smart = R::smart_seqs(R::Eps, R::char('a'));
+        assert!(r_smart == R::char('a'));
+    }
+
+    #[test]
+    // Tests that smart_seqs eliminates R::Eps on the right.
+    fn test_smart_seqs_eps_right() {
+        let r_smart = R::smart_seqs(R::char('a'), R::Eps);
+        assert!(r_smart == R::char('a'));
+    }
+
+    #[test]
+    // Tests that smart_seqs flattens two Seqs into a single flat Seqs.
+    // Seqs([L('a'), L('b')]) . Seqs([L('c'), L('d')]) should produce
+    // Seqs([L('a'), L('b'), L('c'), L('d')]).
+    fn test_smart_seqs_flattens_two_seqs() {
+        let left = R::seqs(vec![R::char('a'), R::char('b')]);
+        let right = R::seqs(vec![R::char('c'), R::char('d')]);
+        let expected = R::seqs(vec![R::char('a'), R::char('b'), R::char('c'), R::char('d')]);
+        assert!(R::smart_seqs(left, right) == expected);
+    }
+
+    #[test]
+    // Tests that smart_seqs prepends a plain regex to an existing Seqs.
+    // L('a') . Seqs([L('b'), L('c')]) should produce Seqs([L('a'), L('b'), L('c')]).
+    fn test_smart_seqs_prepends_to_seqs() {
+        let right = R::seqs(vec![R::char('b'), R::char('c')]);
+        let expected = R::seqs(vec![R::char('a'), R::char('b'), R::char('c')]);
+        assert!(R::smart_seqs(R::char('a'), right) == expected);
+    }
+
+    #[test]
+    // Tests that smart_seqs appends a plain regex to an existing Seqs.
+    // Seqs([L('a'), L('b')]) . L('c') should produce Seqs([L('a'), L('b'), L('c')]).
+    fn test_smart_seqs_appends_to_seqs() {
+        let left = R::seqs(vec![R::char('a'), R::char('b')]);
+        let expected = R::seqs(vec![R::char('a'), R::char('b'), R::char('c')]);
+        assert!(R::smart_seqs(left, R::char('c')) == expected);
+    }
+
+    #[test]
+    // Tests that smart_seqs wraps two plain regexes in a new Seqs.
+    // L('a') . L('b') should produce Seqs([L('a'), L('b')]).
+    fn test_smart_seqs_wraps_two_plain() {
+        let expected = R::seqs(vec![R::char('a'), R::char('b')]);
+        assert!(R::smart_seqs(R::char('a'), R::char('b')) == expected);
+    }
+}
