@@ -211,3 +211,54 @@ fn check_shape(d: &R, r: &R) -> bool {
         _ => unreachable!("impossible case: {:?} {:?}", r, d),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    // Tests that `Eps` is nullable.
+    fn test_nullable_eps() {
+        assert!(nullable(&R::Eps));
+    }
+    #[test]
+    // Tests that `L` is not nullable.
+    fn test_nullable_char() {
+        assert!(nullable(&R::L('a')) == false)
+    }
+    #[test]
+    // Tests that `Seq` is nullable if both sides are nullable.
+    fn test_nullable_seq_all() {
+        assert!(nullable(&R::seq(R::Eps, R::Eps)))
+    }
+    #[test]
+    // Tests that `Seq` is not nullable if one side is not nullable.
+    fn test_nullable_seq_one() {
+        assert!(nullable(&R::seq(R::Eps, R::L('a'))) == false)
+    }
+    #[test]
+    // Tests that `Seqs` is nullable if all elements are nullable.
+    fn test_nullable_seqs_all() {
+        assert!(nullable(&R::seqs(vec![R::Eps, R::Eps, R::Eps])))
+    }
+    #[test]
+    // Tests that `Seqs` is not nullable if any element is not nullable.
+    fn test_nullable_seqs_one() {
+        assert!(nullable(&R::seqs(vec![R::Eps, R::L('a'), R::Eps])) == false)
+    }
+    #[test]
+    // Tests that `Choice` is nullable if either side is nullable.
+    fn test_nullable_choice_one() {
+        assert!(nullable(&R::choice(R::Eps, R::L('a'))))
+    }
+    #[test]
+    // Tests that `Choice` is not nullable if neither side is nullable.
+    fn test_nullable_choice_none() {
+        assert!(nullable(&R::choice(R::L('a'), R::L('b'))) == false)
+    }
+    #[test]
+    // Tests that `Star` is always nullable.
+    fn test_nullable_star() {
+        assert!(nullable(&R::star(R::L('a'))))
+    }
+}
