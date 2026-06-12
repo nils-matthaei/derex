@@ -155,6 +155,61 @@ impl R {
     pub fn char(c: char) -> R {
         R::L(c)
     }
+
+    /// Creates a regex from a string representation.
+    /// This simplifies the use of the library greatly by
+    /// allowing the user to fall back on a familiar representation.
+    ///
+    ///
+    /// Operators in order of precedence:
+    /// - Star(r): "(r)*"
+    /// - Seq(l, r): "lr" / Seqs([r, s, t]): "rst"
+    /// - Alt(l, r): "(l)|(r)"
+    /// - L(a): "a"
+    ///
+    pub fn from_str(s: &str) -> R {
+        parse(R::Eps, s)
+    }
+}
+
+/// Helper for [`R::from_str`]
+fn parse(prev: R, s: &str) -> R {
+    match s.chars().next() {
+        Some(c) => {
+            let (_, rest) = s.split_at(c.len_utf8());
+
+            match c {
+                '(' => {
+                    let close = find_matching_paren(rest).expect("unmatched parenthesis");
+                    let (inner, after) = rest.split_at(close);
+                    let after = &after[1..]; // Consume the closing parenthesis
+                    parse(R::smart_seqs(prev, parse(R::Eps, inner)), after)
+                }
+                ')' => panic!("unmatched parenthesis"),
+                '|' => R::choice(prev, parse(R::Eps, rest)),
+                '*' => parse(R::star(prev), rest),
+                _ => parse(R::smart_seqs(prev, R::char(c)), rest),
+            }
+        }
+        None => prev,
+    }
+}
+
+fn find_matching_paren(s: &str) -> Option<usize> {
+    let mut depth = 0;
+    for (i, c) in s.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => {
+                if depth == 0 {
+                    return Some(i);
+                }
+                depth -= 1;
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Normalizes a regex into Seq-Assoc normal form.
@@ -311,5 +366,29 @@ mod tests {
     fn test_smart_seqs_wraps_two_plain() {
         let expected = R::seqs(vec![R::char('a'), R::char('b')]);
         assert!(R::smart_seqs(R::char('a'), R::char('b')) == expected);
+    }
+
+    #[test]
+    fn test_parse_concat() {
+        let expected = R::smart_seqs(R::L('a'), R::L('b'));
+        assert_eq!(R::from_str("ab"), expected)
+    }
+
+    #[test]
+    fn test_parse_alt() {
+        let expected = R::choice(R::L('a'), R::L('b'));
+        assert_eq!(R::from_str("a|b"), expected)
+    }
+    
+    #[test]
+    fn test_parse_star() {
+        let expected = R::star(R::L('a'));
+        assert_eq!(R::from_str("a*"), expected)
+    }
+    
+    #[test]
+    fn test_parse_paren() {
+        let expedcted = R::choice(R::star(R::smart_seqs(R::L('a'), R::L('b'))), R::L('c'));
+        assert_eq!(R::from_str("(ab)*|c"), expedcted)
     }
 }
