@@ -249,12 +249,12 @@ mod tests {
     #[test]
     // Tests that `Choice` is nullable if either side is nullable.
     fn test_nullable_choice_one() {
-        assert!(nullable(&R::choice(R::Eps, R::L('a'))))
+        assert!(nullable(&R::alt(R::Eps, R::L('a'))))
     }
     #[test]
     // Tests that `Choice` is not nullable if neither side is nullable.
     fn test_nullable_choice_none() {
-        assert!(nullable(&R::choice(R::L('a'), R::L('b'))) == false)
+        assert!(nullable(&R::alt(R::L('a'), R::L('b'))) == false)
     }
     #[test]
     // Tests that `Star` is always nullable.

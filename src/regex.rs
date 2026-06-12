@@ -111,9 +111,9 @@ impl R {
     /// # Example
     /// ```
     /// # use derex::R;
-    /// let a\_or\_b = R::choice(R::char('a'), R::char('b')); // Matches "a" or "b"
+    /// let a\_or\_b = R::alt(R::char('a'), R::char('b')); // Matches "a" or "b"
     /// ```
-    pub fn choice(left: R, right: R) -> R {
+    pub fn alt(left: R, right: R) -> R {
         R::Alt(Box::new(left), Box::new(right))
     }
 
@@ -156,23 +156,30 @@ impl R {
         R::L(c)
     }
 
-    /// Creates a regex from a string representation.
-    /// This simplifies the use of the library greatly by
-    /// allowing the user to fall back on a familiar representation.
+    /// Creates a regular expression from a string representation.
     ///
+    /// # Syntax
+    /// | Pattern | Constructor    |
+    /// |---------|----------------|
+    /// | `a`     | `L('a')`       |
+    /// | `rs`    | `Seqs([r, s])` |
+    /// | `r*`    | `Star(r)`      |
+    /// | `r\|s`  | `Choice(r, s)` |
+    /// | `(r)`   | grouping       |
     ///
-    /// Operators in order of precedence:
-    /// - Star(r): "(r)*"
-    /// - Seq(l, r): "lr" / Seqs([r, s, t]): "rst"
-    /// - Alt(l, r): "(l)|(r)"
-    /// - L(a): "a"
-    ///
+    /// # Example
+    /// ```
+    /// # use derex::regex::R;
+    /// let r = R::from_str("(ab)*");
+    /// assert!(r == R::star(R::seq(R::char('a'), R::char('b'))));
+    /// ```
     pub fn from_str(s: &str) -> R {
         parse(R::Eps, s)
     }
 }
 
-/// Helper for [`R::from_str`]
+/// Recursively parses a string into a regular expression,
+/// accumulating the result in `prev` as it consumes one character at a time.
 fn parse(prev: R, s: &str) -> R {
     match s.chars().next() {
         Some(c) => {
@@ -186,7 +193,7 @@ fn parse(prev: R, s: &str) -> R {
                     parse(R::smart_seqs(prev, parse(R::Eps, inner)), after)
                 }
                 ')' => panic!("unmatched parenthesis"),
-                '|' => R::choice(prev, parse(R::Eps, rest)),
+                '|' => R::alt(prev, parse(R::Eps, rest)),
                 '*' => parse(R::star(prev), rest),
                 _ => parse(R::smart_seqs(prev, R::char(c)), rest),
             }
@@ -195,6 +202,10 @@ fn parse(prev: R, s: &str) -> R {
     }
 }
 
+/// Finds the index of the closing parenthesis matching the opening parenthesis
+/// that precedes the input string `s`.
+/// Correctly handles nested parentheses by tracking depth.
+/// Returns `None` if no matching closing parenthesis is found.
 fn find_matching_paren(s: &str) -> Option<usize> {
     let mut depth = 0;
     for (i, c) in s.char_indices() {
@@ -243,7 +254,7 @@ pub fn normalize(r: R) -> R {
 /// * `r` - The regex to transform
 fn seq_to_seqs(r: R) -> R {
     match r {
-        R::Alt(left, right) => R::choice(seq_to_seqs(*left), seq_to_seqs(*right)),
+        R::Alt(left, right) => R::alt(seq_to_seqs(*left), seq_to_seqs(*right)),
         R::Star(inner) => R::star(seq_to_seqs(*inner)),
         R::Seq(left, right) => R::seqs(vec![seq_to_seqs(*left), seq_to_seqs(*right)]),
         R::Seqs(regexes) => R::seqs(regexes.into_iter().map(seq_to_seqs).collect()),
@@ -263,7 +274,7 @@ fn seq_to_seqs(r: R) -> R {
 /// * `r` - The regex to normalize
 fn norm_seqs(r: R) -> R {
     match r {
-        R::Alt(left, right) => R::choice(norm_seqs(*left), norm_seqs(*right)),
+        R::Alt(left, right) => R::alt(norm_seqs(*left), norm_seqs(*right)),
         R::Star(inner) => R::star(norm_seqs(*inner)),
         R::Seq(_, _) => unreachable!("Seq should have been removed by seq_to_seqs"),
         R::Seqs(regexes) => R::seqs(
@@ -376,19 +387,19 @@ mod tests {
 
     #[test]
     fn test_parse_alt() {
-        let expected = R::choice(R::L('a'), R::L('b'));
+        let expected = R::alt(R::L('a'), R::L('b'));
         assert_eq!(R::from_str("a|b"), expected)
     }
-    
+
     #[test]
     fn test_parse_star() {
         let expected = R::star(R::L('a'));
         assert_eq!(R::from_str("a*"), expected)
     }
-    
+
     #[test]
     fn test_parse_paren() {
-        let expedcted = R::choice(R::star(R::smart_seqs(R::L('a'), R::L('b'))), R::L('c'));
+        let expedcted = R::alt(R::star(R::smart_seqs(R::L('a'), R::L('b'))), R::L('c'));
         assert_eq!(R::from_str("(ab)*|c"), expedcted)
     }
 }
