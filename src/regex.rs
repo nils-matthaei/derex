@@ -174,13 +174,13 @@ impl R {
     /// assert!(r == R::star(R::seq(R::char('a'), R::char('b'))));
     /// ```
     pub fn from_str(s: &str) -> R {
-        parse(R::Eps, s)
+        parse(R::Eps, R::Eps, s)
     }
 }
 
 /// Recursively parses a string into a regular expression,
 /// accumulating the result in `prev` as it consumes one character at a time.
-fn parse(prev: R, s: &str) -> R {
+fn parse(prefix: R, last: R, s: &str) -> R {
     match s.chars().next() {
         Some(c) => {
             let (_, rest) = s.split_at(c.len_utf8());
@@ -190,15 +190,16 @@ fn parse(prev: R, s: &str) -> R {
                     let close = find_matching_paren(rest).expect("unmatched parenthesis");
                     let (inner, after) = rest.split_at(close);
                     let after = &after[1..]; // Consume the closing parenthesis
-                    parse(R::smart_seqs(prev, parse(R::Eps, inner)), after)
+                    let parse_inner = parse(R::Eps, R::Eps, inner);
+                    parse(R::smart_seqs(prefix, last), parse_inner, after)
                 }
                 ')' => panic!("unmatched parenthesis"),
-                '|' => R::alt(prev, parse(R::Eps, rest)),
-                '*' => parse(R::star(prev), rest),
-                _ => parse(R::smart_seqs(prev, R::char(c)), rest),
+                '|' => R::alt(R::smart_seqs(prefix, last), parse(R::Eps, R::Eps, rest)),
+                '*' => parse(prefix, R::star(last), rest),
+                _ => parse(R::smart_seqs(prefix, last), R::char(c), rest),
             }
         }
-        None => prev,
+        None => R::smart_seqs(prefix, last),
     }
 }
 
@@ -393,13 +394,13 @@ mod tests {
 
     #[test]
     fn test_parse_star() {
-        let expected = R::star(R::L('a'));
-        assert_eq!(R::from_str("a*"), expected)
+        let expected = R::seqs(vec![R::L('a'), R::L('a'), R::star(R::L('b'))]);
+        assert_eq!(R::from_str("aab*"), expected)
     }
 
     #[test]
     fn test_parse_paren() {
-        let expedcted = R::alt(R::star(R::smart_seqs(R::L('a'), R::L('b'))), R::L('c'));
-        assert_eq!(R::from_str("(ab)*|c"), expedcted)
+        let expedcted = R::alt(R::smart_seqs(R::L('a'), R::star(R::smart_seqs(R::L('a'), R::L('b')))), R::L('c'));
+        assert_eq!(R::from_str("a(ab)*|c"), expedcted)
     }
 }
