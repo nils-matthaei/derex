@@ -91,7 +91,7 @@ fn part_deriv(c: char, r: &R) -> Vec<R> {
             let star = R::star(*inner.clone());
             let mut pds: Vec<R> = part_deriv(x, inner)
                 .into_iter()
-                .map(|r_prime| R::smart_seq(r_prime, star.clone()))
+                .map(|r_prime| R::smart_seqs(r_prime, star.clone()))
                 .collect();
 
             pds.sort();
