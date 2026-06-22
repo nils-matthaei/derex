@@ -51,6 +51,7 @@ An additional useful property is the neutrality of the empty word $\epsilon$ tow
 $$
 \forall r: \epsilon r = r \epsilon = r
 $$
+
 where $r$ is a regular expressions over $\Sigma$.
 
 This is made use of in the two smart constructor methods `smart_seq` and `smart_seqs`.
