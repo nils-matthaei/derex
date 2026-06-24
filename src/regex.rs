@@ -12,7 +12,7 @@
 /// - `Seq(R, R)`: Sequential composition (concatenation)
 /// - `Alt(R, R)`: Alternation (choice between two patterns)
 /// - `Star(R)`: Kleene star (zero or more repetitions)
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum R {
     /// The empty string. Accepts only the empty string ε.
     Eps,

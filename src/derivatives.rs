@@ -23,7 +23,7 @@ use crate::regex::{R, normalize};
 /// - `Seqs` is nullable if all elements are nullable
 /// - `Alt` is nullable if either side is nullable
 /// - `Star` is always nullable (zero repetitions)
-fn nullable(r: &R) -> bool {
+pub fn nullable(r: &R) -> bool {
     match r {
         R::Eps => true,
         R::L(_) => false,
@@ -37,7 +37,7 @@ fn nullable(r: &R) -> bool {
 /// Computes the set of partial derivatives of a regular expression with respect to a character.
 /// The partial derivative of `r` with respect to `c` is the set of regular expressions
 /// that can follow after matching `c` against `r`.
-fn part_deriv(c: char, r: &R) -> Vec<R> {
+pub fn part_deriv(c: char, r: &R) -> Vec<R> {
     match (c, r) {
         (_, R::Eps) => vec![],
         (x, R::L(y)) => {
@@ -127,7 +127,7 @@ pub fn matcher(input: &str, r: &R) -> bool {
 /// Extracts all distinct characters appearing in a regular expression.
 /// The result is sorted and deduplicated.
 /// Used to determine the alphabet for computing descendants.
-fn letters(r: &R) -> Vec<char> {
+pub fn letters(r: &R) -> Vec<char> {
     match r {
         R::L(c) => vec![*c],
         R::Alt(left, right) | R::Seq(left, right) => {
