@@ -109,10 +109,10 @@ impl DFA {
         }
     }
 
-    /// Walks the transition table character by character starting from self.start. 
-    /// Returns `false` immediately if a transition is missing, handling characters 
-    /// outside the regex's alphabet. 
-    /// 
+    /// Walks the transition table character by character starting from self.start.
+    /// Returns `false` immediately if a transition is missing, handling characters
+    /// outside the regex's alphabet.
+    ///
     /// After all characters have been consumed acceptence is checked by checking
     /// whether the final state is an accepting state of the DFA.
     pub fn matches(&self, word: &str) -> bool {
@@ -126,5 +126,33 @@ impl DFA {
             }
         }
         self.accepting_states.contains(&current_state)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::regex::{self, R, Word};
+    use quickcheck_macros::quickcheck;
+
+    #[test]
+    fn test_correct_match() {
+        let r = R::from_str("ab*");
+        let m = DFA::new(&r);
+        assert!(m.matches("abbb"))
+    }
+
+    #[test]
+    fn test_incorrect_match() {
+        let r = R::from_str("ab*");
+        let m = DFA::new(&r);
+        assert!(!m.matches("abba"))
+    }
+
+    #[quickcheck]
+    fn prop_matcher_matches_matches(r: R, w: Word) -> bool {
+        let m = DFA::new(&r);
+        let word = w.0.as_str();
+        m.matches(word) == matcher(word, &r)
     }
 }

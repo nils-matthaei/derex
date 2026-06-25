@@ -3,6 +3,9 @@
 //! This module provides a basic algebraic representation of regular expressions,
 //! allowing the construction and manipulation of regex patterns programmatically.
 
+use std::char;
+use quickcheck::{Arbitrary, Gen};
+
 /// A regular expression abstract syntax tree.
 ///
 /// `R` represents a regular expression using an algebraic data type with the following constructors:
@@ -292,6 +295,56 @@ fn norm_seqs(r: R) -> R {
     }
 }
 
+// -------------------- QuickCheck Stuff ---------------------------
+const ALPHABET: [char; 3] = ['a', 'b', 'c'];
+
+impl Arbitrary for R {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let depth = (g.size() % 10).max(1);
+        random_regex(g, depth)
+    }
+}
+
+/// Generates a random regular expression of bounded depth, using a small fixed
+/// alphabet and only smart constructors, so all generated expressions are
+/// already in simplified form.
+fn random_regex(g: &mut Gen, depth: usize) -> R {
+    if depth == 0 {
+        return R::char(*g.choose(&ALPHABET).unwrap());
+    }
+
+    match usize::arbitrary(g) % 4 {
+        0 => R::smart_seqs(random_regex(g, depth - 1), random_regex(g, depth - 1)),
+        1 => R::alt(random_regex(g, depth - 1), random_regex(g, depth - 1)),
+        2 => R::star(random_regex(g, depth - 1)),
+        _ => R::char(*g.choose(&ALPHABET).unwrap()),
+    }
+}
+
+/// A wrapper around `String` that generates random strings over the same
+/// fixed alphabet used for generating regular expressions, so that
+/// property tests can pair arbitrary regexes with plausible input words.
+#[derive(Debug, Clone)]
+pub struct Word(pub String);
+
+impl Arbitrary for Word {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let len = usize::arbitrary(g) % g.size();
+        let s: String = (0..len).map(|_| *g.choose(&ALPHABET).unwrap()).collect();
+        Word(s)
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        let s = self.0.clone();
+        Box::new((0..s.len()).map(move |i| {
+            let mut shorter = s.clone();
+            shorter.remove(i);
+            Word(shorter)
+        }))
+    }
+}
+// ------------------------------------------------------------------------
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -400,7 +453,10 @@ mod tests {
 
     #[test]
     fn test_parse_paren() {
-        let expedcted = R::alt(R::smart_seqs(R::L('a'), R::star(R::smart_seqs(R::L('a'), R::L('b')))), R::L('c'));
+        let expedcted = R::alt(
+            R::smart_seqs(R::L('a'), R::star(R::smart_seqs(R::L('a'), R::L('b')))),
+            R::L('c'),
+        );
         assert_eq!(R::from_str("a(ab)*|c"), expedcted)
     }
 }
