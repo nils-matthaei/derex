@@ -284,7 +284,7 @@ $$
 \mathcal{L}(\delta_a(r)) = \\{w \mid aw \in \mathcal{L}(r)\\}
 $$
 
-where $\mathcal{L}(\delta_a(r)) = \bigcup_{r' \in \delta_a(r)} \mathcal{L}(r')$ denotes the union of the languages of all expressions in the derivative set (Antimirov, 1996).
+where $\mathcal{L}(\delta_a(r)) = \bigcup_{r' \in \delta_a(r)} \mathcal{L}(r')$ denotes the union of the languages of all expressions in the derivative set.
 
 This means, that the partial derivatives of $r$ with respect to $a$ are exactly the continuations that remain after matching $a$ against $r$ (Antimirov, 1996). Importantly, the set of all partial derivatives of a regular expression is always finite.
 
