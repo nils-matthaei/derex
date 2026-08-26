@@ -17,6 +17,9 @@ use quickcheck::{Arbitrary, Gen};
 /// - `Star(R)`: Kleene star (zero or more repetitions)
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum R {
+    /// The empty language. Accepts nothing.
+    Phi,
+    
     /// The empty string. Accepts only the empty string ε.
     Eps,
 
@@ -143,6 +146,17 @@ impl R {
     /// ```
     pub fn eps() -> R {
         R::Eps
+    }
+    
+    /// Creates a regex matching nothing.
+    ///
+    /// # Example
+    /// ```
+    /// # use derex::R;
+    /// let empty = R::eps(); // Matches only the empty string
+    /// ```
+    pub fn phi() -> R {
+        R::Phi
     }
 
     /// Creates a regex matching a single character.

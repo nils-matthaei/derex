@@ -12,6 +12,10 @@
 //! ## References
 //! - Antimirov, V. (1996). Partial derivatives of regular expressions and finite automaton constructions.
 //!   <https://www.sciencedirect.com/science/article/pii/0304397595001824>
+//! -  Brzozowski, J. A. (1964). Derivatives of Regular Expressions.
+//!   <https://dl.acm.org/doi/10.1145/321239.321249>
+
+use std::vec;
 
 use crate::regex::{R, normalize};
 
@@ -25,6 +29,7 @@ use crate::regex::{R, normalize};
 /// - `Star` is always nullable (zero repetitions)
 pub fn nullable(r: &R) -> bool {
     match r {
+        R::Phi => false,
         R::Eps => true,
         R::L(_) => false,
         R::Seq(left, right) => nullable(left) && nullable(right),
@@ -34,11 +39,50 @@ pub fn nullable(r: &R) -> bool {
     }
 }
 
+/// Computes the derivative of a regular expression with respect to a character.
+/// The derivative of `r` with respect to `c` is the regular expression
+/// that describes all words that can follow after matching `c` against `r`.
+pub fn deriv(c: char, r: &R) -> R {
+    match (c, r) {
+        (_, R::Phi) => R::Phi,
+        (_, R::Eps) => R::Phi,
+        (x, R::L(y)) => {
+            if x == *y {
+                R::Eps
+            } else {
+                R::Phi
+            }
+        }
+        (x, R::Seq(left, right)) => {
+            let mut dx = R::smart_seq(deriv(x, left), *right.clone());
+            if nullable(left) {
+                dx = R::alt(dx, deriv(x, right));
+            }
+            dx
+        }
+        (x, R::Seqs(rs)) => match rs.as_slice() {
+            [] => R::Phi,
+            [r] => deriv(c, r),
+            [r, rest @ ..] => {
+                let rest_seqs = R::seqs(rest.to_vec());
+                let mut dx: R = R::smart_seqs(deriv(x, r), rest_seqs.clone());
+                if nullable(r) {
+                    dx = R::alt(dx, deriv(c, &rest_seqs));
+                }
+                dx
+            }
+        },
+        (x, R::Alt(left, right)) => R::alt(deriv(x, left), deriv(x, right)),
+        (x, R::Star(inner)) => R::smart_seqs(deriv(x, inner), R::star(*inner.clone())),
+    }
+}
+
 /// Computes the set of partial derivatives of a regular expression with respect to a character.
 /// The partial derivative of `r` with respect to `c` is the set of regular expressions
 /// that can follow after matching `c` against `r`.
 pub fn part_deriv(c: char, r: &R) -> Vec<R> {
     match (c, r) {
+        (_, R::Phi) => vec![],
         (_, R::Eps) => vec![],
         (x, R::L(y)) => {
             if x == *y {
@@ -182,7 +226,7 @@ pub fn subterm(r: &R) -> Vec<R> {
 /// Helper for [`subterm`].
 fn subterm_2(r: &R) -> Vec<R> {
     match r {
-        R::Eps | R::L(_) => vec![],
+        R::Phi | R::Eps | R::L(_) => vec![],
         R::Alt(left, right) | R::Seq(left, right) => [subterm(left), subterm(right)].concat(),
         R::Seqs(rs) => rs.iter().flat_map(|r| subterm(r)).collect(),
         R::Star(inner) => subterm(inner),
